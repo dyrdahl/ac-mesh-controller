@@ -15,7 +15,29 @@ A distributed home automation system for controlling an AC unit via an nRF24L01+
 
 ### Radio Module Capacitor Mod
 
-The nRF24L01+ modules require a 10μF capacitor across VCC and GND to stabilize power delivery and prevent transmission dropouts.
+The nRF24L01+ PA+LNA modules draw up to **115mA peak** during transmit at max power. This causes voltage sag that disrupts the rapid packet exchanges required for mesh DHCP handshakes. Symptoms include unreliable initial connections (e.g., needing to touch the antenna to connect) even though normal operation works once established.
+
+**Fix:** Add capacitors directly across the module's VCC and GND pins:
+
+| Component | Value | Purpose                                                            |
+|-----------|-------|--------------------------------------------------------------------|
+| Electrolytic | **100µF** | Absorbs bulk current dips during TX bursts                         |
+| Ceramic | **68nF (0.068µF)** | Filters high-frequency switching noise. Use up to 100nF capacitor. |
+
+```
+3.3V ──────┬─────────┬──────── nRF24L01+ VCC
+           │         │
+      ┌────┴──┐ ┌────┴──┐
+      │100µF  │ │ 68nF  │
+      │electro│ │ceramic│
+      └────┬──┘ └────┬──┘
+           │         │
+GND ───────┴─────────┴──────── nRF24L01+ GND
+```
+
+- **Electrolytic:** long leg (+) to VCC, short leg (-) to GND
+- **Ceramic:** no polarity
+- Mount as close to the module pins as possible
 
 <p align="center">
   <img src="images/radio_mod.jpg" alt="Capacitor mod on nRF24L01+" width="400">
