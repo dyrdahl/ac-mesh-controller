@@ -2,6 +2,25 @@
 
 A distributed home automation system for controlling an AC unit via an nRF24L01+ mesh network. A Raspberry Pi acts as the central controller, coordinating Arduino nodes that handle relay switching and temperature monitoring.
 
+## Hardware
+
+<p align="center">
+  <img src="images/pi_controller.jpg" alt="Raspberry Pi Controller" width="600">
+</p>
+<p align="center"><em>Raspberry Pi controller with nRF24L01+ radio module</em></p>
+
+| Keypad Node (Boot) | Keypad Node (Main Screen) |
+|:------------------:|:-------------------------:|
+| ![Boot screen](images/keypad_node_boot.jpg) | ![Main screen](images/keypad_node_main.jpg) |
+
+### Radio Module Capacitor Mod
+
+The nRF24L01+ modules require a 10μF capacitor across VCC and GND to stabilize power delivery and prevent transmission dropouts.
+
+<p align="center">
+  <img src="images/radio_mod.jpg" alt="Capacitor mod on nRF24L01+" width="400">
+</p>
+
 ## Architecture
 
 ```
