@@ -13,6 +13,22 @@ A distributed home automation system for controlling an AC unit via an nRF24L01+
 |:------------------:|:-------------------------:|
 | ![Boot screen](images/keypad_node_boot.jpg) | ![Main screen](images/keypad_node_main.jpg) |
 
+### Keypad Node Case
+
+3D printed enclosure for the keypad node.
+
+| Front (Outside) | Front (Inside) |
+|:---------------:|:--------------:|
+| ![Front outside](images/keypad_case/front_display_outside.jpg) | ![Front inside](images/keypad_case/front_display_inside.jpg) |
+
+| Sensor Side (Outside) | Sensor Side (Inside) |
+|:---------------------:|:--------------------:|
+| ![Sensor side outside](images/keypad_case/sensor_side_outside.jpg) | ![Sensor side inside](images/keypad_case/sensor_side_inside.jpg) |
+
+| Logic Board Side (Outside) | Logic Board Side (Inside) |
+|:--------------------------:|:-------------------------:|
+| ![Logic board outside](images/keypad_case/logic_board_outside.jpg) | ![Logic board inside](images/keypad_case/logic_board_inside.jpg) |
+
 ### Radio Module Capacitor Mod
 
 The nRF24L01+ PA+LNA modules draw up to **115mA peak** during transmit at max power. This causes voltage sag that disrupts the rapid packet exchanges required for mesh DHCP handshakes. Symptoms include unreliable initial connections (e.g., needing to touch the antenna to connect) even though normal operation works once established.
