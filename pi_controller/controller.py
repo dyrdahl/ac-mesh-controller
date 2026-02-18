@@ -270,6 +270,7 @@ def database_log(state: bool) -> None:
     Log an AC state change to the database.
 
     Skips logging if the state hasn't changed (prevents duplicate entries).
+    Includes the current temperature reading for efficiency analytics.
 
     Args:
         state: True for AC on, False for AC off
@@ -286,15 +287,17 @@ def database_log(state: bool) -> None:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            'INSERT INTO ac_data (date, time, ac_state) VALUES (%s, %s, %s);',
+            'INSERT INTO ac_data (date, time, ac_state, temperature) VALUES (%s, %s, %s, %s);',
             (
                 datetime.today().strftime('%Y-%m-%d'),
                 datetime.now().strftime('%H:%M:%S.%f'),
-                state
+                state,
+                float(last_known_temp) if last_known_temp else None
             )
         )
         conn.commit()
-        log("db", f"AC state logged: {'ON' if state else 'OFF'}")
+        temp_str = f" @ {last_known_temp}°F" if last_known_temp else ""
+        log("db", f"AC state logged: {'ON' if state else 'OFF'}{temp_str}")
 
     except Exception as error:
         log("error", f"DB write error: {error}")

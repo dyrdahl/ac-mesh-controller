@@ -98,7 +98,18 @@ The controller manages all communication between nodes, logs AC state changes to
 │   ├── socket_server.py      TCP socket module (imported by controller)
 │   ├── mobileConsole.py      Interactive CLI client
 │   ├── table.SQL             Database schema
-│   └── setup-pi.sh           System setup script
+│   ├── setup-pi.sh           System setup script
+│   ├── api/                  FastAPI web server
+│   │   ├── main.py             API entry point
+│   │   ├── config.py           Environment configuration
+│   │   ├── database.py         PostgreSQL helpers
+│   │   ├── weather.py          Open-Meteo integration
+│   │   ├── rates.py            Electricity rate calculations
+│   │   ├── socket_client.py    Controller socket interface
+│   │   └── routers/            API route handlers
+│   └── web/                  Vue 3 dashboard
+│       ├── src/                Source code
+│       └── dist/               Production build
 │
 └── arduino_nodes/          Arduino firmware
     ├── AC_Interface/
@@ -148,32 +159,170 @@ All mesh communication uses a compact key-value format designed to fit within th
 ### Prerequisites
 
 - Raspberry Pi with nRF24L01+ module connected via SPI
-- PostgreSQL server running locally
-- Python 3.10+ with `pyrf24`, `psycopg2-binary`, `colorama`, `termcolor`
+- Fresh Raspberry Pi OS installation
 
-### Database Setup
+### Automated Setup
+
+The setup script installs all dependencies, configures the database, builds the web dashboard, and sets up systemd services:
 
 ```bash
-psql -U pi -d postgres -f pi_controller/table.SQL
+cd pi_controller
+chmod +x setup-pi.sh
+./setup-pi.sh
 ```
 
-### Running
-
-Start the controller (must run continuously):
+After setup completes, edit the API configuration:
 
 ```bash
-python3 pi_controller/controller.py
+nano pi_controller/api/.env
 ```
 
-Connect with the interactive console (on demand):
+Then reboot:
 
 ```bash
-python3 pi_controller/mobileConsole.py
+sudo reboot
+```
+
+The system will start automatically. Access the dashboard at `http://<pi-hostname>/`
+
+### Manual Running (Development)
+
+Start the controller:
+
+```bash
+cd pi_controller
+source .venv/bin/activate
+python3 controller.py
+```
+
+Connect with the interactive console:
+
+```bash
+python3 mobileConsole.py
 ```
 
 ### Arduino Nodes
 
 Open the `.ino` files in Arduino IDE, install the [required libraries](arduino_nodes/), select your board, and upload.
+
+## Web Dashboard
+
+A modern web interface for monitoring and controlling the AC system remotely.
+
+<p align="center">
+  <img src="images/website.png" alt="AC Dashboard" width="800">
+</p>
+
+### Features
+
+- Real-time temperature display and AC status
+- Temperature history charts (today and weekly)
+- Outdoor weather from Open-Meteo API
+- Runtime statistics (daily, weekly, monthly, all-time)
+- Electricity cost tracking with TOU rate periods
+- Peak usage analysis by hour
+- Control buttons for AC power, permission, and thresholds
+
+### Configuration
+
+Copy the example environment file and fill in your values:
+
+```bash
+cd pi_controller/api
+cp .env.example .env
+```
+
+Edit `.env` with your settings:
+
+| Variable | Example | Description |
+|----------|---------|-------------|
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_NAME` | `postgres` | Database name |
+| `DB_USER` | `postgres` | Database user |
+| `DB_PASSWORD` | `your_password` | Database password |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `LATITUDE` | `37.3348` | Location latitude (for weather) |
+| `LONGITUDE` | `-122.0086` | Location longitude |
+| `TIMEZONE` | `America/Los_Angeles` | Local timezone |
+| `AC_WATTS` | `5000` | AC unit power consumption (watts) |
+| `SUMMER_ON_PEAK` | `0.57614` | Summer on-peak rate ($/kWh) |
+| `SUMMER_OFF_PEAK` | `0.51719` | Summer off-peak rate |
+| `SUMMER_SUPER_OFF_PEAK` | `0.46163` | Summer super off-peak rate |
+| `WINTER_ON_PEAK` | `0.62177` | Winter on-peak rate |
+| `WINTER_OFF_PEAK` | `0.54003` | Winter off-peak rate |
+| `WINTER_SUPER_OFF_PEAK` | `0.44924` | Winter super off-peak rate |
+
+### Building the Frontend
+
+```bash
+cd pi_controller/web
+npm install
+npm run build
+```
+
+The production build will be in `dist/`.
+
+### Running
+
+**Development mode** (separate servers):
+
+```bash
+# Terminal 1: API server
+cd pi_controller
+PYTHONPATH=. .venv/bin/uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+
+# Terminal 2: Frontend dev server
+cd pi_controller/web
+npm run dev
+```
+
+**Production mode** (nginx + uvicorn):
+
+The `setup-pi.sh` script configures nginx to serve the Vue build and proxy API requests to uvicorn. It also creates systemd services for automatic startup.
+
+```bash
+# Services start automatically after setup, or manually:
+sudo systemctl start ac-controller  # Mesh network controller
+sudo systemctl start ac-api         # FastAPI server
+sudo systemctl start nginx          # Web server
+
+# View logs
+journalctl -u ac-api -f
+journalctl -u ac-controller -f
+```
+
+Access the dashboard at `http://<pi-hostname>/`
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/ac/status` | GET | Current AC state and temperature |
+| `/ac/live` | GET | Live status for polling |
+| `/ac/settings` | GET | Temperature thresholds and permissions |
+| `/ac/nodes` | GET | Mesh node status |
+| `/ac/power/on` | POST | Turn AC on |
+| `/ac/power/off` | POST | Turn AC off |
+| `/ac/thresholds` | POST | Set min/max temperature |
+| `/ac/permission/toggle` | POST | Toggle AC permission flag |
+| `/ac/brightness` | POST | Set LED brightness |
+| `/ac/reset` | POST | Reset AC node |
+| `/analytics/summary` | GET | All analytics data |
+
+### Dependencies
+
+**API (Python):**
+- `fastapi` - Web framework
+- `uvicorn` - ASGI server
+- `psycopg2-binary` - PostgreSQL driver
+- `httpx` - Async HTTP client (weather API)
+- `python-dotenv` - Environment file loading
+
+**Frontend (Node.js):**
+- Vue 3 + TypeScript
+- Vite (build tool)
+- Tailwind CSS
+- Chart.js + vue-chartjs
 
 ## Safety Features
 
@@ -187,3 +336,5 @@ Open the `.ino` files in Arduino IDE, install the [required libraries](arduino_n
 
 - [`pi_controller/`](pi_controller/) -- Server software details, database schema, socket protocol
 - [`arduino_nodes/`](arduino_nodes/) -- Hardware wiring, firmware details, required libraries
+
+
